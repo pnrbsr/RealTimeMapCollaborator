@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let mapMarkers = [];
     let userName = null;
 
-    // Function to prompt the user for their name (but only the first time they interact with the map)
+    // Function to prompt the user for their name (but only when adding the first marker)
     const promptUserName = () => {
         if (!userName) {
             userName = prompt("Enter your name:");
