@@ -29,32 +29,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let mapMarkers = [];
     let userName = null;
 
-    // Function to prompt the user for their name (but only when adding the first marker)
+    // Function to prompt the user for their name
     const promptUserName = () => {
         if (!userName) {
             userName = prompt("Enter your name:");
+            if (!userName) {
+                alert("You need to enter a name to add markers.");
+            }
         }
     };
 
     // Function to add a marker to the map and Firestore
     const addMarker = (lat, lng) => {
-        promptUserName(); // Prompt for username before adding the first marker
-        if (!userName) return; // Don't add a marker if the user cancels the prompt
-        addDoc(collection(db, "markers"), {
-            lat: lat,
-            lng: lng,
-            user: userName // Store the username with the marker
-        }).catch((error) => {
-            console.error("Error adding document: ", error);
-        });
-    };
+        if (!userName) {
+            promptUserName();
+        }
+        if (userName) {
+            // Add marker to the map
+            const marker = L.marker([lat, lng]).addTo(map);
+            mapMarkers.push(marker);
 
-    // Function to remove a marker from Firestore and the map
-    const removeMarker = (marker, docId) => {
-        map.removeLayer(marker);
-        deleteDoc(doc(db, "markers", docId)).catch((error) => {
-            console.error("Error removing document: ", error);
-        });
+            // Add marker data to Firestore
+            addDoc(collection(db, "markers"), {
+                lat: lat,
+                lng: lng,
+                user: userName
+            }).catch((error) => {
+                console.error("Error adding document: ", error);
+            });
+        }
     };
 
     // Event listener to add a marker on map click
@@ -92,7 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Real-time listener to track markers and update the dashboard
-    onSnapshot(collection(db, "markers"), () => {
+    onSnapshot(collection(db, "markers"), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                const { lat, lng } = change.doc.data();
+                L.marker([lat, lng]).addTo(map);
+            }
+        });
         updateDashboard();
     });
 
