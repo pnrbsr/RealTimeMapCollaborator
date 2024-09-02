@@ -1,0 +1,50 @@
+/* style.css */
+
+/* Ensure the map takes up the full width and height of the container */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+}
+
+#map {
+    height: 100vh; /* This makes the map take up the full viewport height */
+    width: 100vw;  /* This makes the map take up the full viewport width */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Adds a shadow effect */
+}
+
+/* Optional: Add a header or title to your page */
+header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.map-container {
+    flex: 1;
+    position: relative;
+}
+
+/* Add some custom styles for map markers if needed */
+.leaflet-marker-icon {
+    border-radius: 50%;
+    border: 2px solid #4CAF50;
+}
+
+/* Optional: Custom styles for map popups */
+.leaflet-popup-content {
+    font-size: 14px;
+    font-weight: bold;
+}
