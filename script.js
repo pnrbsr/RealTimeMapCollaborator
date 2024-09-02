@@ -30,9 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to add a marker to the map and Firestore
     const addMarker = (lat, lng) => {
-        // Add marker to the map
-        L.marker([lat, lng]).addTo(map);
-
         // Add marker data to Firestore with user info
         addDoc(collection(db, "markers"), {
             lat: lat,
@@ -40,6 +37,17 @@ document.addEventListener('DOMContentLoaded', () => {
             user: userName
         }).catch((error) => {
             console.error("Error adding document: ", error);
+        });
+    };
+
+    // Function to remove a marker from Firestore and the map
+    const removeMarker = (marker, docId) => {
+        // Remove the marker from the map
+        map.removeLayer(marker);
+
+        // Remove the marker document from Firestore
+        deleteDoc(doc(db, "markers", docId)).catch((error) => {
+            console.error("Error removing document: ", error);
         });
     };
 
@@ -51,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize the dashboard container
     const dashboard = document.getElementById('dashboard');
-    
+
     // Function to update the dashboard
     const updateDashboard = (userCounts) => {
         dashboard.innerHTML = '<h3>User Dashboard</h3>';
@@ -64,22 +72,32 @@ document.addEventListener('DOMContentLoaded', () => {
     onSnapshot(collection(db, "markers"), (snapshot) => {
         const userCounts = {};
 
-        snapshot.forEach(doc => {
-            const user = doc.data().user;
-            if (userCounts[user]) {
-                userCounts[user] += 1;
-            } else {
-                userCounts[user] = 1;
+        snapshot.docChanges().forEach((change) => {
+            const docId = change.doc.id;
+            const { lat, lng, user } = change.doc.data();
+
+            if (change.type === "added") {
+                // Add marker to the map
+                const marker = L.marker([lat, lng]).addTo(map);
+
+                // Add click event listener for marker removal
+                marker.on('click', () => {
+                    if (confirm("Do you want to remove this marker?")) {
+                        removeMarker(marker, docId);
+                    }
+                });
+
+                // Update user count
+                if (userCounts[user]) {
+                    userCounts[user] += 1;
+                } else {
+                    userCounts[user] = 1;
+                }
+            } else if (change.type === "removed") {
+                // Update user count on removal (not implemented in this example)
             }
         });
 
         updateDashboard(userCounts);
-
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === "added") {
-                const { lat, lng } = change.doc.data();
-                L.marker([lat, lng]).addTo(map);
-            }
-        });
     });
 });
