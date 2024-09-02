@@ -36,64 +36,77 @@ document.addEventListener('DOMContentLoaded', () => {
         addDoc(collection(db, "markers"), {
             lat: lat,
             lng: lng,
-            user: userName
+            user: userName // Store the username with the marker
         }).catch((error) => {
             console.error("Error adding document: ", error);
         });
     };
 
     // Function to remove a marker from Firestore and the map
-    // Function to remove a marker from Firestore and the map
-const removeMarker = (marker, docId) => {
-    // Remove the marker from the map
-    map.removeLayer(marker);
+    const removeMarker = (marker, docId) => {
+        map.removeLayer(marker);
+        deleteDoc(doc(db, "markers", docId)).catch((error) => {
+            console.error("Error removing document: ", error);
+        });
+    };
 
-    // Remove the marker document from Firestore
-    deleteDoc(doc(db, "markers", docId)).catch((error) => {
-        console.error("Error removing document: ", error);
+    // Event listener to add a marker on map click
+    map.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        addMarker(lat, lng);
     });
-};
 
-// Real-time listener to track markers and add click listeners for removal
-onSnapshot(collection(db, "markers"), (snapshot) => {
-    const userCounts = {};
+    // Initialize the dashboard container
+    const dashboard = document.getElementById('dashboard');
 
-    snapshot.docChanges().forEach((change) => {
-        const docId = change.doc.id;
-        const { lat, lng, user } = change.doc.data();
+    // Function to update the dashboard
+    const updateDashboard = (userCounts) => {
+        dashboard.innerHTML = '<h3>User Dashboard</h3>';
+        Object.keys(userCounts).forEach(user => {
+            dashboard.innerHTML += `<p>${user}: ${userCounts[user]} cities</p>`;
+        });
+    };
 
-        if (change.type === "added") {
-            // Add marker to the map
-            const marker = L.marker([lat, lng]).addTo(map);
+    // Real-time listener to track markers and add click listeners for removal
+    onSnapshot(collection(db, "markers"), (snapshot) => {
+        const userCounts = {};
 
-            // Attach an event listener for removing the marker
-            marker.on('click', () => {
-                if (confirm("Do you want to remove this marker?")) {
-                    removeMarker(marker, docId);
+        snapshot.docChanges().forEach((change) => {
+            const docId = change.doc.id;
+            const { lat, lng, user } = change.doc.data();
+
+            if (change.type === "added") {
+                // Add marker to the map
+                const marker = L.marker([lat, lng]).addTo(map);
+                mapMarkers.push(marker);
+
+                // Attach an event listener for removing the marker, only if the user is the owner
+                if (user === userName) {
+                    marker.on('click', () => {
+                        if (confirm("Do you want to remove this marker?")) {
+                            removeMarker(marker, docId);
+                        }
+                    });
                 }
-            });
 
-            // Track the marker for potential later use (e.g., board reset)
-            mapMarkers.push(marker);
+                // Update user count
+                if (userCounts[user]) {
+                    userCounts[user] += 1;
+                } else {
+                    userCounts[user] = 1;
+                }
+            } else if (change.type === "removed") {
+                // Find and remove the marker from the map if it has been removed from Firestore
+                const markerToRemove = mapMarkers.find(m => m.getLatLng().lat === lat && m.getLatLng().lng === lng);
+                if (markerToRemove) {
+                    map.removeLayer(markerToRemove);
+                    mapMarkers = mapMarkers.filter(m => m !== markerToRemove);
+                }
+            }
+        });
 
-            // Update user count
-            if (userCounts[user]) {
-                userCounts[user] += 1;
-            } else {
-                userCounts[user] = 1;
-            }
-        } else if (change.type === "removed") {
-            // Find and remove the marker from the map if it has been removed from Firestore
-            const markerToRemove = mapMarkers.find(m => m.getLatLng().lat === lat && m.getLatLng().lng === lng);
-            if (markerToRemove) {
-                map.removeLayer(markerToRemove);
-                mapMarkers = mapMarkers.filter(m => m !== markerToRemove);
-            }
-        }
+        updateDashboard(userCounts);
     });
-
-    updateDashboard(userCounts);
-});
 
     // Function to reset the board
     const resetBoard = async () => {
