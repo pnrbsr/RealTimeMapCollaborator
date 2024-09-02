@@ -112,8 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add event listener to the reset button
     document.getElementById('resetBoard').addEventListener('click', () => {
-        if (confirm("Are you sure you want to reset the board? This will remove all markers.")) {
-            resetBoard();
-        }
+        resetBoard();
     });
 });
