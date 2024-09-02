@@ -17,8 +17,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize the map
-    const map = L.map('map').setView([39.9334, 32.8597], 5); // Centered on Turkey
+    // Initialize the map centered on Turkey
+    const map = L.map('map').setView([39.9334, 32.8597], 5);
 
     // Add OpenStreetMap tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addDoc(collection(db, "markers"), {
             lat: lat,
             lng: lng
+        }).catch((error) => {
+            console.error("Error adding document: ", error);
         });
     };
 
@@ -43,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addMarker(lat, lng);
     });
 
-    // Listen for real-time updates from Firestore
+    // Listen for real-time updates from Firestore and add markers to the map
     onSnapshot(collection(db, "markers"), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
