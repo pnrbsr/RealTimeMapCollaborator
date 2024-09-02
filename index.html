@@ -5,13 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Collaborative Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css"> <!-- Ensure this is correct -->
+    <link rel="stylesheet" href="style.css"> <!-- Link to your custom styles -->
 </head>
 <body>
     <header>Real-Time Collaborative Map</header>
-    <div id="map"></div> <!-- This is the map container -->
+
+    <!-- Dashboard to display user activity -->
+    <div id="dashboard" style="padding: 10px; background-color: #f9f9f9;">
+        <h3>User Dashboard</h3>
+        <!-- The user data will be dynamically inserted here by JavaScript -->
+    </div>
+
+    <!-- Map container -->
+    <div id="map" style="width: 100%; height: 600px; margin-top: 10px;"></div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script type="module" src="script.js"></script> <!-- Ensure this is correct -->
+    <script type="module" src="script.js"></script> <!-- Link to your script.js file -->
 </body>
 </html>

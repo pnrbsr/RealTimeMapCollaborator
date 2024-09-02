@@ -25,15 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Prompt user for their name (simple implementation for demonstration)
+    const userName = prompt("Enter your name:");
+
     // Function to add a marker to the map and Firestore
     const addMarker = (lat, lng) => {
         // Add marker to the map
         L.marker([lat, lng]).addTo(map);
 
-        // Add marker data to Firestore
+        // Add marker data to Firestore with user info
         addDoc(collection(db, "markers"), {
             lat: lat,
-            lng: lng
+            lng: lng,
+            user: userName
         }).catch((error) => {
             console.error("Error adding document: ", error);
         });
@@ -45,8 +49,32 @@ document.addEventListener('DOMContentLoaded', () => {
         addMarker(lat, lng);
     });
 
-    // Listen for real-time updates from Firestore and add markers to the map
+    // Initialize the dashboard container
+    const dashboard = document.getElementById('dashboard');
+    
+    // Function to update the dashboard
+    const updateDashboard = (userCounts) => {
+        dashboard.innerHTML = '<h3>User Dashboard</h3>';
+        Object.keys(userCounts).forEach(user => {
+            dashboard.innerHTML += `<p>${user}: ${userCounts[user]} cities</p>`;
+        });
+    };
+
+    // Real-time listener to track markers and update the dashboard
     onSnapshot(collection(db, "markers"), (snapshot) => {
+        const userCounts = {};
+
+        snapshot.forEach(doc => {
+            const user = doc.data().user;
+            if (userCounts[user]) {
+                userCounts[user] += 1;
+            } else {
+                userCounts[user] = 1;
+            }
+        });
+
+        updateDashboard(userCounts);
+
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
                 const { lat, lng } = change.doc.data();
