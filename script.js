@@ -27,12 +27,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Array to store references to map markers
     let mapMarkers = [];
+    let userName = null;
 
-    // Prompt user for their name (simple implementation for demonstration)
-    const userName = prompt("Enter your name:");
+    // Function to prompt the user for their name (but only the first time they interact with the map)
+    const promptUserName = () => {
+        if (!userName) {
+            userName = prompt("Enter your name:");
+        }
+    };
 
     // Function to add a marker to the map and Firestore
     const addMarker = (lat, lng) => {
+        promptUserName(); // Prompt for username before adding the first marker
+        if (!userName) return; // Don't add a marker if the user cancels the prompt
         addDoc(collection(db, "markers"), {
             lat: lat,
             lng: lng,
@@ -56,56 +63,37 @@ document.addEventListener('DOMContentLoaded', () => {
         addMarker(lat, lng);
     });
 
-    // Initialize the dashboard container
-    const dashboard = document.getElementById('dashboard');
-
-    // Function to update the dashboard
-    const updateDashboard = (userCounts) => {
-        dashboard.innerHTML = '<h3>User Dashboard</h3>';
-        Object.keys(userCounts).forEach(user => {
-            dashboard.innerHTML += `<p>${user}: ${userCounts[user]} cities</p>`;
-        });
-    };
-
-    // Real-time listener to track markers and add click listeners for removal
-    onSnapshot(collection(db, "markers"), (snapshot) => {
+    // Function to update the dashboard with the top 10 users
+    const updateDashboard = async () => {
+        // Query to get the top 10 users by number of markers
+        const q = query(collection(db, "markers"), orderBy("user"), limit(10));
+        const querySnapshot = await getDocs(q);
         const userCounts = {};
 
-        snapshot.docChanges().forEach((change) => {
-            const docId = change.doc.id;
-            const { lat, lng, user } = change.doc.data();
-
-            if (change.type === "added") {
-                // Add marker to the map
-                const marker = L.marker([lat, lng]).addTo(map);
-                mapMarkers.push(marker);
-
-                // Attach an event listener for removing the marker, only if the user is the owner
-                if (user === userName) {
-                    marker.on('click', () => {
-                        if (confirm("Do you want to remove this marker?")) {
-                            removeMarker(marker, docId);
-                        }
-                    });
-                }
-
-                // Update user count
-                if (userCounts[user]) {
-                    userCounts[user] += 1;
-                } else {
-                    userCounts[user] = 1;
-                }
-            } else if (change.type === "removed") {
-                // Find and remove the marker from the map if it has been removed from Firestore
-                const markerToRemove = mapMarkers.find(m => m.getLatLng().lat === lat && m.getLatLng().lng === lng);
-                if (markerToRemove) {
-                    map.removeLayer(markerToRemove);
-                    mapMarkers = mapMarkers.filter(m => m !== markerToRemove);
-                }
+        // Count the number of markers for each user
+        querySnapshot.forEach(doc => {
+            const user = doc.data().user;
+            if (userCounts[user]) {
+                userCounts[user] += 1;
+            } else {
+                userCounts[user] = 1;
             }
         });
 
-        updateDashboard(userCounts);
+        // Sort users by the number of places visited (descending order)
+        const sortedUsers = Object.keys(userCounts).sort((a, b) => userCounts[b] - userCounts[a]).slice(0, 10);
+
+        // Update the dashboard UI
+        const dashboard = document.getElementById('dashboard');
+        dashboard.innerHTML = '<h3>User Dashboard - Top 10 Users</h3>';
+        sortedUsers.forEach(user => {
+            dashboard.innerHTML += `<p>${user}: ${userCounts[user]} places</p>`;
+        });
+    };
+
+    // Real-time listener to track markers and update the dashboard
+    onSnapshot(collection(db, "markers"), () => {
+        updateDashboard();
     });
 
     // Function to reset the board
@@ -119,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Remove all markers from the map
         mapMarkers.forEach(marker => map.removeLayer(marker));
         mapMarkers = [];
+        updateDashboard();
     };
 
     // Add event listener to the reset button
