@@ -16,7 +16,45 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-document.addEventListener('DOMContentLoaded', () => {
+// Function to get user's IP address using ipify
+async function getUserIP() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        console.error('Error fetching IP address:', error);
+        return null;
+    }
+}
+
+// Function to check if the user can create an account based on IP
+async function canCreateAccount(ip) {
+    const docRef = doc(db, "ipAddresses", ip);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.accountCount >= 5) { // Limit set to 5 accounts per IP
+            alert("You have reached the limit of accounts that can be created from this IP address.");
+            return false;
+        } else {
+            // Update the account count for this IP
+            await updateDoc(docRef, {
+                accountCount: data.accountCount + 1
+            });
+            return true;
+        }
+    } else {
+        // If IP address is not in the database, add it with accountCount set to 1
+        await setDoc(docRef, {
+            accountCount: 1
+        });
+        return true;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     // Initialize the map centered on Turkey
     const map = L.map('map').setView([39.9334, 32.8597], 5);
 
@@ -28,13 +66,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Array to store references to map markers
     let mapMarkers = [];
     let userName = null;
+    let userIP = await getUserIP();
 
-    // Function to prompt the user for their name
-    const promptUserName = () => {
+    // Function to prompt the user for their name and check IP restriction
+    const promptUserName = async () => {
         if (!userName) {
-            userName = prompt("Enter your name:");
-            if (!userName) {
-                alert("You need to enter a name to add markers.");
+            const canCreate = await canCreateAccount(userIP);
+            if (canCreate) {
+                userName = prompt("Enter your name:");
+                if (!userName) {
+                    alert("You need to enter a name to add markers.");
+                }
             }
         }
     };
